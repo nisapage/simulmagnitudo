@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Magnitudo Bintang</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: #1e293b;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        h1 { text-align: center; color: #38bdf8; font-size: 24px; margin-top: 0; }
+        .canvas-box {
+            width: 100%;
+            height: 200px;
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #334155;
+            margin-bottom: 20px;
+        }
+        #star-visual {
+            border-radius: 50%;
+            transition: all 0.1s ease;
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.8);
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            background-color: #334155;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #cbd5e1; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 15px;
+        }
+        .card {
+            background-color: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #38bdf8;
+            text-align: center;
+        }
+        .card h3 { margin: 0; font-size: 13px; color: #94a3b8; text-transform: uppercase; }
+        .card .value { font-size: 24px; font-weight: bold; color: #f8fafc; margin: 10px 0 5px 0; }
+        .card .desc { font-size: 11px; color: #64748b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>✨ Simulasi Fotometri: 4 Jenis Magnitudo</h1>
+    
+    <!-- Visualisasi Bintang -->
+    <div class="canvas-box">
+        <div id="star-visual"></div>
+        <span style="position: absolute; bottom: 10px; left: 10px; font-size: 12px; color: #64748b;">Pengamat (Bumi)</span>
+    </div>
+
+    <!-- Slider Kontrol -->
+    <div class="controls">
+        <div class="control-group">
+            <label>Jarak Bintang: <span id="val-dist" style="color:#38bdf8">10</span> parsec</label>
+            <input type="range" id="slider-dist" min="1" max="100" step="1" value="10">
+        </div>
+        <div class="control-group">
+            <label>Luminositas (vs Matahari): <span id="val-lum" style="color:#38bdf8">1</span> L☉</label>
+            <input type="range" id="slider-lum" min="0.1" max="50" step="0.1" value="1">
+        </div>
+        <div class="control-group">
+            <label>Temperatur Suhu: <span id="val-temp" style="color:#38bdf8">5778</span> Kelvin</label>
+            <input type="range" id="slider-temp" min="3000" max="20000" step="100" value="5778">
+        </div>
+    </div>
+
+    <!-- Hasil Output -->
+    <div class="results">
+        <div class="card" style="border-color: #f43f5e;">
+            <h3>Magnitudo Semu (m)</h3>
+            <div class="value" id="out-m">4.83</div>
+            <div class="desc">Terang tampak dari Bumi</div>
+        </div>
+        <div class="card" style="border-color: #10b981;">
+            <h3>Magnitudo Mutlak (M)</h3>
+            <div class="value" id="out-M">4.83</div>
+            <div class="desc">Terang asli (di 10 parsec)</div>
+        </div>
+        <div class="card" style="border-color: #eab308;">
+            <h3>Magnitudo Bolometrik</h3>
+            <div class="value" id="out-bol">4.74</div>
+            <div class="desc">Total seluruh energi (m_bol)</div>
+        </div>
+        <div class="card" style="border-color: #8b5cf6;">
+            <h3>Indeks Warna (B - V)</h3>
+            <div class="value" id="out-bv">+0.65</div>
+            <div class="desc">Spesifik Filter Biru vs Visual</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const sliderDist = document.getElementById('slider-dist');
+    const sliderLum = document.getElementById('slider-lum');
+    const sliderTemp = document.getElementById('slider-temp');
+
+    const valDist = document.getElementById('val-dist');
+    const valLum = document.getElementById('val-lum');
+    const valTemp = document.getElementById('val-temp');
+
+    const outM = document.getElementById('out-M');
+    const outm = document.getElementById('out-m');
+    const outBol = document.getElementById('out-bol');
+    const outBV = document.getElementById('out-bv');
+    
+    const starVisual = document.getElementById('star-visual');
+
+    // Fungsi pendekatan sederhana mengubah Kelvin ke Warna RGB/HEX
+    function getStarColor(temp) {
+        if (temp < 3700) return '#ff4d4d'; // Merah (Kerdil Merah)
+        if (temp < 5200) return '#ffaa33'; // Jingga/Oranye
+        if (temp < 6000) return '#ffee66'; // Kuning (Matahari)
+        if (temp < 7500) return '#ffffcc'; // Putih kekuningan
+        if (temp < 10000) return '#ffffff'; // Putih murni
+        return '#99ccff'; // Biru keputihan (Bintang panas)
+    }
+
+    function updateSimulation() {
+        const d = parseFloat(sliderDist.value);
+        const L = parseFloat(sliderLum.value);
+        const T = parseFloat(sliderTemp.value);
+
+        // Update teks label slider
+        valDist.textContent = d;
+        valLum.textContent = L;
+        valTemp.textContent = T;
+
+        // 1. Hitung Magnitudo Mutlak Visual (M_V), patokan Matahari = 4.83
+        const M_v = 4.83 - 2.5 * Math.log10(L);
+
+        // 2. Hitung Magnitudo Semu (m) pakai modulus jarak
+        const m = M_v + 5 * Math.log10(d) - 5;
+
+        // 3. Hitung Bolometrik Semu (m_bol), patokan Matahari = 4.74
+        const M_bol = 4.74 - 2.5 * Math.log10(L);
+        const m_bol = M_bol + 5 * Math.log10(d) - 5;
+
+        // 4. Hitung pendekatan Indeks Warna (B - V) berdasarkan suhu (rumus empiris Ballesteros)
+        const bv = 4600 / (T - 460) - 0.23;
+
+        // Tampilkan hasil ke UI (dibulatkan 2 desimal)
+        outM.textContent = M_v.toFixed(2);
+        outm.textContent = m.toFixed(2);
+        outBol.textContent = m_bol.toFixed(2);
+        outBV.textContent = (bv > 0 ? "+" : "") + bv.toFixed(2);
+
+        // Efek Visualisasi Bintang
+        const color = getStarColor(T);
+        // Ukuran visual bergantung pada luminositas dan jarak
+        let size = Math.max(10, Math.min(120, (30 * Math.sqrt(L)) / (d / 10)));
+        
+        starVisual.style.width = size + 'px';
+        starVisual.style.height = size + 'px';
+        starVisual.style.backgroundColor = color;
+        starVisual.style.boxShadow = `0 0 ${size * 1.5}px ${color}`;
+    }
+
+    // Pasang event listener ke semua slider
+    sliderDist.addEventListener('input', updateSimulation);
+    sliderLum.addEventListener('input', updateSimulation);
+    sliderTemp.addEventListener('input', updateSimulation);
+
+    // Jalankan sekali saat web pertama dibuka
+    updateSimulation();
+</script>
+
+</body>
+</html>
